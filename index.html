@@ -152,6 +152,14 @@
         .offline {
             background-color: #dc3545;
         }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+            font-size: 0.9em;
+            color: #666;
+        }
         @media print {
             .no-print {
                 display: none;
@@ -164,6 +172,9 @@
                 border: none;
                 box-shadow: none;
                 padding: 0;
+            }
+            .footer {
+                display: none;
             }
         }
     </style>
@@ -251,7 +262,6 @@
             </div>
             
             <div id="photo-container" class="photo-container">
-                <!-- Fotos serão adicionadas aqui dinamicamente -->
                 <div class="photo-item" style="display: none;">
                     <img class="photo-preview" src="">
                     <div class="form-group">
@@ -272,9 +282,12 @@
             <button id="save-data" class="btn btn-secondary">Salvar Dados</button>
             <button id="load-data" class="btn btn-secondary">Carregar Dados</button>
         </div>
+        
+        <div class="footer">
+            <p>Todos os direitos reservados &copy; <span id="current-year"></span> - Iram Mendes Jr - Analista Ambiental - ICMBio</p>
+        </div>
     </div>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     
     <script>
@@ -311,14 +324,12 @@
                 return;
             }
             
-            // Remove camadas offline se existirem
             map.eachLayer(layer => {
                 if (layer._url && layer._url.includes('offline-tiles')) {
                     map.removeLayer(layer);
                 }
             });
             
-            // Adiciona camadas online
             baseLayers["Satélite"].addTo(map);
             currentLayer = baseLayers["Satélite"];
         }
@@ -332,14 +343,12 @@
                 return;
             }
             
-            // Remove camadas online se existirem
             map.eachLayer(layer => {
                 if (layer._url && (layer._url.includes('openstreetmap') || layer._url.includes('google'))) {
                     map.removeLayer(layer);
                 }
             });
             
-            // Tenta carregar tiles offline
             try {
                 const offlineLayer = L.tileLayer('offline-tiles/{z}/{x}/{y}.png', {
                     attribution: 'Map data offline',
@@ -363,32 +372,26 @@
                 return;
             }
             
-            // Inicializa o mapa
             map = L.map('map').setView([lat, lng], 15);
             
-            // Configura as camadas do mapa
             const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             });
             
-            // Camada de satélite usando Google Satellite
             const satelliteLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
                 attribution: 'Imagens © Google Satellite'
             });
             
-            // Camada híbrida (satélite + ruas)
             const hybridLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
                 attribution: 'Imagens © Google Hybrid'
             });
             
-            // Adiciona as camadas ao objeto baseLayers
             baseLayers = {
                 "Satélite": satelliteLayer,
                 "Ruas": streetLayer,
                 "Híbrido": hybridLayer
             };
             
-            // Adiciona a camada apropriada baseado no status da conexão
             if (isOnline) {
                 satelliteLayer.addTo(map);
                 currentLayer = satelliteLayer;
@@ -396,18 +399,15 @@
                 initMapWithOfflineLayers(lat, lng);
             }
             
-            // Adiciona o marcador
             marker = L.marker([lat, lng], {
                 draggable: true
             }).addTo(map);
             
-            // Evento para quando o marcador é arrastado
             marker.on('dragend', function() {
                 const newLatLng = marker.getLatLng();
                 updateCoordinates(newLatLng.lat, newLatLng.lng);
             });
             
-            // Permite clicar no mapa para definir localização
             map.on('click', function(e) {
                 updateCoordinates(e.latlng.lat, e.latlng.lng);
                 if (!marker) {
@@ -454,7 +454,6 @@
             updateDMSCoordinates(lat, lng);
             coordError.textContent = '';
             
-            // Atualiza o mapa se já estiver inicializado
             if (map) {
                 map.setView([lat, lng]);
                 if (marker) {
@@ -577,7 +576,6 @@
                 photos: []
             };
             
-            // Adiciona informações sobre as fotos (sem os dados binários)
             document.querySelectorAll('.photo-item:not([style*="display: none"])').forEach(photo => {
                 reportData.photos.push({
                     caption: photo.querySelector('.photo-caption').value,
@@ -585,10 +583,8 @@
                 });
             });
             
-            // Salva no localStorage
             localStorage.setItem('ambientalReportData', JSON.stringify(reportData));
             
-            // Salva no IndexedDB para maior capacidade de armazenamento
             if ('indexedDB' in window) {
                 const request = indexedDB.open('AmbientalReportsDB', 1);
                 
@@ -626,14 +622,12 @@
         
         // Carrega os dados do localStorage ou IndexedDB
         function loadData() {
-            // Primeiro tenta do localStorage
             const savedData = localStorage.getItem('ambientalReportData');
             if (savedData) {
                 loadDataFromStorage(savedData);
                 return;
             }
             
-            // Se não encontrar no localStorage, tenta no IndexedDB
             if ('indexedDB' in window) {
                 const request = indexedDB.open('AmbientalReportsDB', 1);
                 
@@ -645,7 +639,6 @@
                     
                     getAllRequest.onsuccess = function() {
                         if (getAllRequest.result.length > 0) {
-                            // Pega o relatório mais recente
                             const reports = getAllRequest.result;
                             reports.sort((a, b) => b.createdAt - a.createdAt);
                             loadDataFromStorage(JSON.stringify(reports[0].data));
@@ -686,7 +679,6 @@
                     parseFloat(reportData.longitude)
                 );
                 
-                // Atualiza o mapa com as coordenadas carregadas
                 initMap(
                     parseFloat(reportData.latitude),
                     parseFloat(reportData.longitude)
@@ -728,7 +720,6 @@
                 addPhoto(files[i], { lat, lng });
             }
             
-            // Limpa o input para permitir adicionar as mesmas fotos novamente se necessário
             e.target.value = '';
         });
         
@@ -736,19 +727,15 @@
         window.addEventListener('online', updateConnectionStatus);
         window.addEventListener('offline', updateConnectionStatus);
         
-        // Preenche a data e hora atuais por padrão
+        // Inicialização
         window.onload = function() {
             const now = new Date();
             document.getElementById('data').value = now.toISOString().split('T')[0];
             document.getElementById('hora').value = now.toTimeString().substring(0, 5);
+            document.getElementById('current-year').textContent = new Date().getFullYear();
             
-            // Inicializa o status da conexão
             updateConnectionStatus();
-            
-            // Inicializa o mapa com localização padrão (Brasília)
             initMap(-15.788, -47.879);
-            
-            // Registra o Service Worker
             registerServiceWorker();
         };
     </script>
