@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Fotográfico - Auto de Infração Ambiental</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #006400;
+        }
+        h1, h2 {
+            color: #006400;
+        }
+        .form-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .btn {
+            background-color: #006400;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        .btn-pdf {
+            background-color: #d9534f;
+        }
+        .coordinates {
+            display: flex;
+            gap: 15px;
+        }
+        .coord-input {
+            flex: 1;
+        }
+        .error {
+            color: red;
+            margin-top: 5px;
+        }
+        .photo-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .photo-item {
+            flex: 1 1 300px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .photo-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background-color: #f5f5f5;
+            margin-bottom: 10px;
+        }
+        .datetime-group {
+            display: flex;
+            gap: 15px;
+        }
+        .datetime-input {
+            flex: 1;
+        }
+        .dms-coordinates {
+            font-family: monospace;
+            background-color: #f5f5f5;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .map-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .map-type-btn {
+            padding: 5px 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .map-type-btn.active {
+            background-color: #006400;
+            color: white;
+        }
+        .action-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        .online {
+            background-color: #28a745;
+        }
+        .offline {
+            background-color: #dc3545;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .container {
+                border: none;
+                box-shadow: none;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="connectionStatus" class="connection-status offline">Offline</div>
+    
+    <div class="container" id="relatorio">
+        <div class="header">
+            <h1>Relatório Fotográfico - Auto de Infração Ambiental</h1>
+            <p>Instituto Chico Mendes de Conservação da Biodiversidade - ICMBio</p>
+        </div>
+        
+        <div class="form-section">
+            <h2>Dados Administrativos</h2>
+            
+            <div class="form-group">
+                <label for="auto_numero">Número do Auto de Infração:</label>
+                <input type="text" id="auto_numero" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="acao_numero">Número da Ação:</label>
+                <input type="text" id="acao_numero" required>
+            </div>
+            
+            <div class="form-group datetime-group">
+                <div class="datetime-input">
+                    <label for="data">Data:</label>
+                    <input type="date" id="data" required>
+                </div>
+                <div class="datetime-input">
+                    <label for="hora">Hora:</label>
+                    <input type="time" id="hora" required>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>Localização</h2>
+            
+            <div class="form-group">
+                <label for="local">Local da Infração:</label>
+                <input type="text" id="local" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Coordenadas Geográficas (Graus Decimais):</label>
+                <div class="coordinates">
+                    <input type="text" id="latitude" class="coord-input" placeholder="Latitude" readonly>
+                    <input type="text" id="longitude" class="coord-input" placeholder="Longitude" readonly>
+                </div>
+                <div id="coord-error" class="error"></div>
+            </div>
+            
+            <div class="form-group">
+                <label>Coordenadas em Graus, Minutos e Segundos:</label>
+                <div id="dms-coordinates" class="dms-coordinates">Não disponível</div>
+            </div>
+            
+            <div class="buttons no-print">
+                <button id="get-location" class="btn">Obter Localização Atual</button>
+                <button id="manual-coords" class="btn btn-secondary">Inserir Coordenadas Manualmente</button>
+            </div>
+            
+            <div id="map"></div>
+            <div id="map-static" style="display: none;"></div>
+        </div>
+        
+        <div class="form-section">
+            <h2>Descrição da Ação</h2>
+            <div class="form-group">
+                <label for="descricao">Descrição do que foi realizado em campo:</label>
+                <textarea id="descricao" rows="6" required></textarea>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>Registro Fotográfico</h2>
+            
+            <div class="form-group no-print">
+                <label for="photo-upload">Adicionar Fotos:</label>
+                <input type="file" id="photo-upload" accept="image/*" multiple>
+                <small>Selecione uma ou mais fotos para upload</small>
+            </div>
+            
+            <div id="photo-container" class="photo-container">
+                <!-- Fotos serão adicionadas aqui dinamicamente -->
+                <div class="photo-item" style="display: none;">
+                    <img class="photo-preview" src="">
+                    <div class="form-group">
+                        <label>Legenda:</label>
+                        <input type="text" class="photo-caption" placeholder="Descreva a foto">
+                    </div>
+                    <div class="form-group">
+                        <label>Coordenadas:</label>
+                        <input type="text" class="photo-coords" readonly>
+                    </div>
+                    <button class="btn btn-secondary remove-photo no-print">Remover</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="action-buttons no-print">
+            <button id="print-report" class="btn">Imprimir Relatório</button>
+            <button id="save-data" class="btn btn-secondary">Salvar Dados</button>
+            <button id="load-data" class="btn btn-secondary">Carregar Dados</button>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    
+    <script>
+        // Variáveis globais
+        let map;
+        let marker;
+        const coordError = document.getElementById('coord-error');
+        let currentPhotos = [];
+        let baseLayers = {};
+        let currentLayer;
+        let isOnline = navigator.onLine;
+        const connectionStatus = document.getElementById('connectionStatus');
+        
+        // Atualiza o status da conexão
+        function updateConnectionStatus() {
+            isOnline = navigator.onLine;
+            if (isOnline) {
+                connectionStatus.textContent = 'Online';
+                connectionStatus.className = 'connection-status online';
+                initMapWithOnlineLayers();
+            } else {
+                connectionStatus.textContent = 'Offline';
+                connectionStatus.className = 'connection-status offline';
+                initMapWithOfflineLayers();
+            }
+        }
+        
+        // Inicializa o mapa com camadas online
+        function initMapWithOnlineLayers(lat, lng) {
+            if (!map) {
+                const defaultLat = lat || -15.788;
+                const defaultLng = lng || -47.879;
+                initMap(defaultLat, defaultLng);
+                return;
+            }
+            
+            // Remove camadas offline se existirem
+            map.eachLayer(layer => {
+                if (layer._url && layer._url.includes('offline-tiles')) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            // Adiciona camadas online
+            baseLayers["Satélite"].addTo(map);
+            currentLayer = baseLayers["Satélite"];
+        }
+        
+        // Inicializa o mapa com camadas offline
+        function initMapWithOfflineLayers(lat, lng) {
+            if (!map) {
+                const defaultLat = lat || -15.788;
+                const defaultLng = lng || -47.879;
+                initMap(defaultLat, defaultLng);
+                return;
+            }
+            
+            // Remove camadas online se existirem
+            map.eachLayer(layer => {
+                if (layer._url && (layer._url.includes('openstreetmap') || layer._url.includes('google'))) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            // Tenta carregar tiles offline
+            try {
+                const offlineLayer = L.tileLayer('offline-tiles/{z}/{x}/{y}.png', {
+                    attribution: 'Map data offline',
+                    maxZoom: 18,
+                    minZoom: 3
+                }).addTo(map);
+                currentLayer = offlineLayer;
+            } catch (e) {
+                document.getElementById('map').innerHTML = 
+                    '<p style="text-align: center; padding-top: 180px;">Mapa offline não disponível. Conecte-se à internet para carregar mapas.</p>';
+            }
+        }
+        
+        // Inicializa o mapa
+        function initMap(lat, lng) {
+            if (map) {
+                map.setView([lat, lng], 15);
+                if (marker) {
+                    marker.setLatLng([lat, lng]);
+                }
+                return;
+            }
+            
+            // Inicializa o mapa
+            map = L.map('map').setView([lat, lng], 15);
+            
+            // Configura as camadas do mapa
+            const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            });
+            
+            // Camada de satélite usando Google Satellite
+            const satelliteLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                attribution: 'Imagens © Google Satellite'
+            });
+            
+            // Camada híbrida (satélite + ruas)
+            const hybridLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                attribution: 'Imagens © Google Hybrid'
+            });
+            
+            // Adiciona as camadas ao objeto baseLayers
+            baseLayers = {
+                "Satélite": satelliteLayer,
+                "Ruas": streetLayer,
+                "Híbrido": hybridLayer
+            };
+            
+            // Adiciona a camada apropriada baseado no status da conexão
+            if (isOnline) {
+                satelliteLayer.addTo(map);
+                currentLayer = satelliteLayer;
+            } else {
+                initMapWithOfflineLayers(lat, lng);
+            }
+            
+            // Adiciona o marcador
+            marker = L.marker([lat, lng], {
+                draggable: true
+            }).addTo(map);
+            
+            // Evento para quando o marcador é arrastado
+            marker.on('dragend', function() {
+                const newLatLng = marker.getLatLng();
+                updateCoordinates(newLatLng.lat, newLatLng.lng);
+            });
+            
+            // Permite clicar no mapa para definir localização
+            map.on('click', function(e) {
+                updateCoordinates(e.latlng.lat, e.latlng.lng);
+                if (!marker) {
+                    marker = L.marker(e.latlng, {
+                        draggable: true
+                    }).addTo(map);
+                    marker.on('dragend', function() {
+                        const newLatLng = marker.getLatLng();
+                        updateCoordinates(newLatLng.lat, newLatLng.lng);
+                    });
+                } else {
+                    marker.setLatLng(e.latlng);
+                }
+            });
+        }
+        
+        // Converte graus decimais para DMS
+        function decimalToDMS(decimal, isLatitude) {
+            const absDecimal = Math.abs(decimal);
+            const degrees = Math.floor(absDecimal);
+            const minutesNotTruncated = (absDecimal - degrees) * 60;
+            const minutes = Math.floor(minutesNotTruncated);
+            const seconds = ((minutesNotTruncated - minutes) * 60).toFixed(2);
+            
+            const direction = isLatitude 
+                ? (decimal >= 0 ? 'N' : 'S') 
+                : (decimal >= 0 ? 'E' : 'W');
+            
+            return `${degrees}° ${minutes}' ${seconds}" ${direction}`;
+        }
+        
+        // Atualiza as coordenadas DMS
+        function updateDMSCoordinates(lat, lng) {
+            const latDMS = decimalToDMS(lat, true);
+            const lngDMS = decimalToDMS(lng, false);
+            document.getElementById('dms-coordinates').textContent = 
+                `Latitude: ${latDMS} | Longitude: ${lngDMS}`;
+        }
+        
+        // Atualiza os campos de coordenadas
+        function updateCoordinates(lat, lng) {
+            document.getElementById('latitude').value = lat.toFixed(6);
+            document.getElementById('longitude').value = lng.toFixed(6);
+            updateDMSCoordinates(lat, lng);
+            coordError.textContent = '';
+            
+            // Atualiza o mapa se já estiver inicializado
+            if (map) {
+                map.setView([lat, lng]);
+                if (marker) {
+                    marker.setLatLng([lat, lng]);
+                } else {
+                    marker = L.marker([lat, lng], {
+                        draggable: true
+                    }).addTo(map);
+                    marker.on('dragend', function() {
+                        const newLatLng = marker.getLatLng();
+                        updateCoordinates(newLatLng.lat, newLatLng.lng);
+                    });
+                }
+            }
+        }
+        
+        // Obtém a localização atual
+        function getLocation() {
+            coordError.textContent = 'Obtendo localização...';
+            
+            if (!navigator.geolocation) {
+                coordError.textContent = 'Geolocalização não é suportada pelo seu navegador';
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    updateCoordinates(lat, lng);
+                    initMap(lat, lng);
+                },
+                function(error) {
+                    let errorMessage;
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = "Permissão de localização negada pelo usuário";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = "Informações de localização indisponíveis";
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = "Tempo limite para obter localização excedido";
+                            break;
+                        case error.UNKNOWN_ERROR:
+                            errorMessage = "Ocorreu um erro desconhecido";
+                            break;
+                    }
+                    coordError.textContent = "Erro: " + errorMessage;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+        
+        // Permite inserir coordenadas manualmente
+        function manualCoords() {
+            const lat = prompt("Digite a latitude (ex: -15.788):");
+            const lng = prompt("Digite a longitude (ex: -47.879):");
+            
+            if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+                updateCoordinates(parseFloat(lat), parseFloat(lng));
+                initMap(parseFloat(lat), parseFloat(lng));
+            } else {
+                alert("Coordenadas inválidas. Por favor, insira valores numéricos.");
+            }
+        }
+        
+        // Adiciona uma foto ao relatório
+        function addPhoto(file, coords) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const photoContainer = document.getElementById('photo-container');
+                const template = photoContainer.querySelector('.photo-item');
+                const newPhoto = template.cloneNode(true);
+                
+                newPhoto.style.display = 'block';
+                newPhoto.querySelector('.photo-preview').src = e.target.result;
+                newPhoto.querySelector('.photo-coords').value = 
+                    `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
+                
+                newPhoto.querySelector('.remove-photo').addEventListener('click', function() {
+                    photoContainer.removeChild(newPhoto);
+                    currentPhotos = currentPhotos.filter(p => p.id !== newPhoto.dataset.id);
+                });
+                
+                const photoId = 'photo-' + Date.now();
+                newPhoto.dataset.id = photoId;
+                photoContainer.appendChild(newPhoto);
+                
+                currentPhotos.push({
+                    id: photoId,
+                    file: file,
+                    coords: coords,
+                    element: newPhoto
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Imprime o relatório
+        function printReport() {
+            window.print();
+        }
+        
+        // Salva os dados no localStorage e IndexedDB
+        function saveData() {
+            const reportData = {
+                autoNumero: document.getElementById('auto_numero').value,
+                acaoNumero: document.getElementById('acao_numero').value,
+                data: document.getElementById('data').value,
+                hora: document.getElementById('hora').value,
+                local: document.getElementById('local').value,
+                latitude: document.getElementById('latitude').value,
+                longitude: document.getElementById('longitude').value,
+                descricao: document.getElementById('descricao').value,
+                photos: []
+            };
+            
+            // Adiciona informações sobre as fotos (sem os dados binários)
+            document.querySelectorAll('.photo-item:not([style*="display: none"])').forEach(photo => {
+                reportData.photos.push({
+                    caption: photo.querySelector('.photo-caption').value,
+                    coords: photo.querySelector('.photo-coords').value
+                });
+            });
+            
+            // Salva no localStorage
+            localStorage.setItem('ambientalReportData', JSON.stringify(reportData));
+            
+            // Salva no IndexedDB para maior capacidade de armazenamento
+            if ('indexedDB' in window) {
+                const request = indexedDB.open('AmbientalReportsDB', 1);
+                
+                request.onupgradeneeded = function(event) {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('reports')) {
+                        db.createObjectStore('reports', { keyPath: 'id' });
+                    }
+                };
+                
+                request.onsuccess = function(event) {
+                    const db = event.target.result;
+                    const transaction = db.transaction(['reports'], 'readwrite');
+                    const store = transaction.objectStore('reports');
+                    
+                    const reportToSave = {
+                        id: Date.now(),
+                        data: reportData,
+                        createdAt: new Date()
+                    };
+                    
+                    store.put(reportToSave);
+                    
+                    alert('Dados salvos com sucesso no banco de dados offline!');
+                };
+                
+                request.onerror = function(event) {
+                    console.error('IndexedDB error:', event.target.error);
+                    alert('Dados salvos apenas no localStorage. Erro ao acessar IndexedDB.');
+                };
+            } else {
+                alert('Dados salvos com sucesso no localStorage!');
+            }
+        }
+        
+        // Carrega os dados do localStorage ou IndexedDB
+        function loadData() {
+            // Primeiro tenta do localStorage
+            const savedData = localStorage.getItem('ambientalReportData');
+            if (savedData) {
+                loadDataFromStorage(savedData);
+                return;
+            }
+            
+            // Se não encontrar no localStorage, tenta no IndexedDB
+            if ('indexedDB' in window) {
+                const request = indexedDB.open('AmbientalReportsDB', 1);
+                
+                request.onsuccess = function(event) {
+                    const db = event.target.result;
+                    const transaction = db.transaction(['reports'], 'readonly');
+                    const store = transaction.objectStore('reports');
+                    const getAllRequest = store.getAll();
+                    
+                    getAllRequest.onsuccess = function() {
+                        if (getAllRequest.result.length > 0) {
+                            // Pega o relatório mais recente
+                            const reports = getAllRequest.result;
+                            reports.sort((a, b) => b.createdAt - a.createdAt);
+                            loadDataFromStorage(JSON.stringify(reports[0].data));
+                        } else {
+                            alert('Nenhum dado salvo encontrado.');
+                        }
+                    };
+                    
+                    getAllRequest.onerror = function() {
+                        alert('Erro ao carregar dados do banco de dados offline.');
+                    };
+                };
+                
+                request.onerror = function(event) {
+                    console.error('IndexedDB error:', event.target.error);
+                    alert('Nenhum dado salvo encontrado.');
+                };
+            } else {
+                alert('Nenhum dado salvo encontrado.');
+            }
+        }
+        
+        function loadDataFromStorage(savedData) {
+            const reportData = JSON.parse(savedData);
+            
+            document.getElementById('auto_numero').value = reportData.autoNumero || '';
+            document.getElementById('acao_numero').value = reportData.acaoNumero || '';
+            document.getElementById('data').value = reportData.data || '';
+            document.getElementById('hora').value = reportData.hora || '';
+            document.getElementById('local').value = reportData.local || '';
+            document.getElementById('latitude').value = reportData.latitude || '';
+            document.getElementById('longitude').value = reportData.longitude || '';
+            document.getElementById('descricao').value = reportData.descricao || '';
+            
+            if (reportData.latitude && reportData.longitude) {
+                updateDMSCoordinates(
+                    parseFloat(reportData.latitude),
+                    parseFloat(reportData.longitude)
+                );
+                
+                // Atualiza o mapa com as coordenadas carregadas
+                initMap(
+                    parseFloat(reportData.latitude),
+                    parseFloat(reportData.longitude)
+                );
+            }
+            
+            alert('Dados carregados com sucesso! Nota: As fotos precisarão ser adicionadas novamente.');
+        }
+        
+        // Registra o Service Worker para cache de mapas offline
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful');
+                }).catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            }
+        }
+        
+        // Event Listeners
+        document.getElementById('get-location').addEventListener('click', getLocation);
+        document.getElementById('manual-coords').addEventListener('click', manualCoords);
+        document.getElementById('print-report').addEventListener('click', printReport);
+        document.getElementById('save-data').addEventListener('click', saveData);
+        document.getElementById('load-data').addEventListener('click', loadData);
+        
+        document.getElementById('photo-upload').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const lat = parseFloat(document.getElementById('latitude').value);
+            const lng = parseFloat(document.getElementById('longitude').value);
+            
+            if (isNaN(lat) || isNaN(lng)) {
+                alert("Por favor, defina as coordenadas antes de adicionar fotos.");
+                return;
+            }
+            
+            for (let i = 0; i < files.length; i++) {
+                addPhoto(files[i], { lat, lng });
+            }
+            
+            // Limpa o input para permitir adicionar as mesmas fotos novamente se necessário
+            e.target.value = '';
+        });
+        
+        // Monitora mudanças na conexão
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        
+        // Preenche a data e hora atuais por padrão
+        window.onload = function() {
+            const now = new Date();
+            document.getElementById('data').value = now.toISOString().split('T')[0];
+            document.getElementById('hora').value = now.toTimeString().substring(0, 5);
+            
+            // Inicializa o status da conexão
+            updateConnectionStatus();
+            
+            // Inicializa o mapa com localização padrão (Brasília)
+            initMap(-15.788, -47.879);
+            
+            // Registra o Service Worker
+            registerServiceWorker();
+        };
+    </script>
+</body>
+</html>
