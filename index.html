@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatório Fotográfico - Auto de Infração Ambiental</title>
+    <title>Relatório Fotográfico Ambiental 2.0</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
         body {
@@ -30,9 +30,6 @@
         }
         .form-section {
             margin-bottom: 25px;
-            padding: 15px;
-            border: 1px solid #eee;
-            border-radius: 5px;
         }
         .form-group {
             margin-bottom: 15px;
@@ -93,6 +90,17 @@
             border: 1px solid #ddd;
             padding: 10px;
             border-radius: 5px;
+            position: relative;
+        }
+        .photo-number {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background-color: rgba(0, 100, 0, 0.7);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: bold;
         }
         .photo-preview {
             width: 100%;
@@ -160,6 +168,21 @@
             font-size: 0.9em;
             color: #666;
         }
+        .termo-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .auto-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .add-btn {
+            margin-bottom: 15px;
+        }
         @media print {
             .no-print {
                 display: none;
@@ -176,6 +199,9 @@
             .footer {
                 display: none;
             }
+            .photo-item {
+                page-break-inside: avoid;
+            }
         }
     </style>
 </head>
@@ -184,24 +210,14 @@
     
     <div class="container" id="relatorio">
         <div class="header">
-            <h1>Relatório Fotográfico - Auto de Infração Ambiental</h1>
+            <h1>Relatório Fotográfico Ambiental - Versão 2.0</h1>
             <p>Instituto Chico Mendes de Conservação da Biodiversidade - ICMBio</p>
         </div>
         
         <div class="form-section">
-            <h2>Dados Administrativos</h2>
+            <h2>Dados do Relatório</h2>
             
-            <div class="form-group">
-                <label for="auto_numero">Número do Auto de Infração:</label>
-                <input type="text" id="auto_numero" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="acao_numero">Número da Ação:</label>
-                <input type="text" id="acao_numero" required>
-            </div>
-            
-            <div class="form-group datetime-group">
+            <div class="datetime-group">
                 <div class="datetime-input">
                     <label for="data">Data:</label>
                     <input type="date" id="data" required>
@@ -211,13 +227,9 @@
                     <input type="time" id="hora" required>
                 </div>
             </div>
-        </div>
-        
-        <div class="form-section">
-            <h2>Localização</h2>
             
             <div class="form-group">
-                <label for="local">Local da Infração:</label>
+                <label for="local">Local da Fiscalização:</label>
                 <input type="text" id="local" required>
             </div>
             
@@ -241,13 +253,52 @@
             </div>
             
             <div id="map"></div>
-            <div id="map-static" style="display: none;"></div>
+        </div>
+        
+        <div class="form-section">
+            <h2>Autos de Infração</h2>
+            <div id="autos-container">
+                <div class="auto-item">
+                    <div class="form-group">
+                        <label for="auto_numero_1">Número do Auto de Infração:</label>
+                        <input type="text" id="auto_numero_1" class="auto-numero" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="auto_descricao_1">Descrição da Infração:</label>
+                        <textarea id="auto_descricao_1" class="auto-descricao" rows="3" required></textarea>
+                    </div>
+                </div>
+            </div>
+            <button id="add-auto" class="btn btn-secondary add-btn no-print">Adicionar outro Auto</button>
+        </div>
+        
+        <div class="form-section">
+            <h2>Termos</h2>
+            <div id="termos-container">
+                <div class="termo-item">
+                    <div class="form-group">
+                        <label for="termo_tipo_1">Tipo de Termo:</label>
+                        <select id="termo_tipo_1" class="termo-tipo" required>
+                            <option value="">Selecione...</option>
+                            <option value="notificacao">Termo de Notificação</option>
+                            <option value="apreensao">Termo de Apreensão</option>
+                            <option value="embargo">Termo de Embargo</option>
+                            <option value="soltura">Termo de Soltura</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="termo_numero_1">Número do Termo:</label>
+                        <input type="text" id="termo_numero_1" class="termo-numero" required>
+                    </div>
+                </div>
+            </div>
+            <button id="add-termo" class="btn btn-secondary add-btn no-print">Adicionar outro Termo</button>
         </div>
         
         <div class="form-section">
             <h2>Descrição da Ação</h2>
             <div class="form-group">
-                <label for="descricao">Descrição do que foi realizado em campo:</label>
+                <label for="descricao">Descrição detalhada do que foi realizado em campo:</label>
                 <textarea id="descricao" rows="6" required></textarea>
             </div>
         </div>
@@ -263,6 +314,7 @@
             
             <div id="photo-container" class="photo-container">
                 <div class="photo-item" style="display: none;">
+                    <div class="photo-number">Figura 1</div>
                     <img class="photo-preview" src="">
                     <div class="form-group">
                         <label>Legenda:</label>
@@ -300,6 +352,9 @@
         let currentLayer;
         let isOnline = navigator.onLine;
         const connectionStatus = document.getElementById('connectionStatus');
+        let autoCount = 1;
+        let termoCount = 1;
+        let photoCount = 0;
         
         // Atualiza o status da conexão
         function updateConnectionStatus() {
@@ -525,15 +580,81 @@
             }
         }
         
+        // Adiciona um novo auto de infração
+        function addAuto() {
+            autoCount++;
+            const newAuto = document.createElement('div');
+            newAuto.className = 'auto-item';
+            newAuto.innerHTML = `
+                <div class="form-group">
+                    <label for="auto_numero_${autoCount}">Número do Auto de Infração:</label>
+                    <input type="text" id="auto_numero_${autoCount}" class="auto-numero" required>
+                </div>
+                <div class="form-group">
+                    <label for="auto_descricao_${autoCount}">Descrição da Infração:</label>
+                    <textarea id="auto_descricao_${autoCount}" class="auto-descricao" rows="3" required></textarea>
+                </div>
+                <button class="btn btn-secondary remove-auto no-print" data-id="${autoCount}">Remover Auto</button>
+            `;
+            document.getElementById('autos-container').appendChild(newAuto);
+            
+            // Adiciona evento para remover o auto
+            newAuto.querySelector('.remove-auto').addEventListener('click', function() {
+                if (autoCount > 1) {
+                    document.getElementById('autos-container').removeChild(newAuto);
+                    autoCount--;
+                } else {
+                    alert("Pelo menos um auto de infração deve ser mantido.");
+                }
+            });
+        }
+        
+        // Adiciona um novo termo
+        function addTermo() {
+            termoCount++;
+            const newTermo = document.createElement('div');
+            newTermo.className = 'termo-item';
+            newTermo.innerHTML = `
+                <div class="form-group">
+                    <label for="termo_tipo_${termoCount}">Tipo de Termo:</label>
+                    <select id="termo_tipo_${termoCount}" class="termo-tipo" required>
+                        <option value="">Selecione...</option>
+                        <option value="notificacao">Termo de Notificação</option>
+                        <option value="apreensao">Termo de Apreensão</option>
+                        <option value="embargo">Termo de Embargo</option>
+                        <option value="soltura">Termo de Soltura</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="termo_numero_${termoCount}">Número do Termo:</label>
+                    <input type="text" id="termo_numero_${termoCount}" class="termo-numero" required>
+                </div>
+                <button class="btn btn-secondary remove-termo no-print" data-id="${termoCount}">Remover Termo</button>
+            `;
+            document.getElementById('termos-container').appendChild(newTermo);
+            
+            // Adiciona evento para remover o termo
+            newTermo.querySelector('.remove-termo').addEventListener('click', function() {
+                if (termoCount > 1) {
+                    document.getElementById('termos-container').removeChild(newTermo);
+                    termoCount--;
+                } else {
+                    alert("Pelo menos um termo deve ser mantido.");
+                }
+            });
+        }
+        
         // Adiciona uma foto ao relatório
         function addPhoto(file, coords) {
             const reader = new FileReader();
             reader.onload = function(e) {
+                photoCount++;
                 const photoContainer = document.getElementById('photo-container');
                 const template = photoContainer.querySelector('.photo-item');
                 const newPhoto = template.cloneNode(true);
                 
                 newPhoto.style.display = 'block';
+                newPhoto.querySelector('.photo-number').textContent = `Figura ${photoCount}`;
                 newPhoto.querySelector('.photo-preview').src = e.target.result;
                 newPhoto.querySelector('.photo-coords').value = 
                     `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
@@ -541,6 +662,7 @@
                 newPhoto.querySelector('.remove-photo').addEventListener('click', function() {
                     photoContainer.removeChild(newPhoto);
                     currentPhotos = currentPhotos.filter(p => p.id !== newPhoto.dataset.id);
+                    updatePhotoNumbers();
                 });
                 
                 const photoId = 'photo-' + Date.now();
@@ -557,6 +679,17 @@
             reader.readAsDataURL(file);
         }
         
+        // Atualiza a numeração das fotos
+        function updatePhotoNumbers() {
+            const photos = document.querySelectorAll('.photo-item:not([style*="display: none"])');
+            photoCount = 0;
+            
+            photos.forEach((photo, index) => {
+                photoCount++;
+                photo.querySelector('.photo-number').textContent = `Figura ${photoCount}`;
+            });
+        }
+        
         // Imprime o relatório
         function printReport() {
             window.print();
@@ -565,17 +698,36 @@
         // Salva os dados no localStorage e IndexedDB
         function saveData() {
             const reportData = {
-                autoNumero: document.getElementById('auto_numero').value,
-                acaoNumero: document.getElementById('acao_numero').value,
                 data: document.getElementById('data').value,
                 hora: document.getElementById('hora').value,
                 local: document.getElementById('local').value,
                 latitude: document.getElementById('latitude').value,
                 longitude: document.getElementById('longitude').value,
                 descricao: document.getElementById('descricao').value,
+                autos: [],
+                termos: [],
                 photos: []
             };
             
+            // Coleta dados dos autos
+            document.querySelectorAll('.auto-item').forEach((auto, index) => {
+                const autoId = index + 1;
+                reportData.autos.push({
+                    numero: document.getElementById(`auto_numero_${autoId}`).value,
+                    descricao: document.getElementById(`auto_descricao_${autoId}`).value
+                });
+            });
+            
+            // Coleta dados dos termos
+            document.querySelectorAll('.termo-item').forEach((termo, index) => {
+                const termoId = index + 1;
+                reportData.termos.push({
+                    tipo: document.getElementById(`termo_tipo_${termoId}`).value,
+                    numero: document.getElementById(`termo_numero_${termoId}`).value
+                });
+            });
+            
+            // Coleta dados das fotos
             document.querySelectorAll('.photo-item:not([style*="display: none"])').forEach(photo => {
                 reportData.photos.push({
                     caption: photo.querySelector('.photo-caption').value,
@@ -664,8 +816,15 @@
         function loadDataFromStorage(savedData) {
             const reportData = JSON.parse(savedData);
             
-            document.getElementById('auto_numero').value = reportData.autoNumero || '';
-            document.getElementById('acao_numero').value = reportData.acaoNumero || '';
+            // Limpa os containers antes de carregar novos dados
+            document.getElementById('autos-container').innerHTML = '';
+            document.getElementById('termos-container').innerHTML = '';
+            
+            // Define os contadores para zero
+            autoCount = 0;
+            termoCount = 0;
+            
+            // Carrega dados básicos
             document.getElementById('data').value = reportData.data || '';
             document.getElementById('hora').value = reportData.hora || '';
             document.getElementById('local').value = reportData.local || '';
@@ -683,6 +842,42 @@
                     parseFloat(reportData.latitude),
                     parseFloat(reportData.longitude)
                 );
+            }
+            
+            // Carrega autos de infração
+            if (reportData.autos && reportData.autos.length > 0) {
+                reportData.autos.forEach((auto, index) => {
+                    if (index === 0) {
+                        // Usa o primeiro auto que já existe
+                        document.getElementById('auto_numero_1').value = auto.numero || '';
+                        document.getElementById('auto_descricao_1').value = auto.descricao || '';
+                        autoCount = 1;
+                    } else {
+                        // Adiciona novos autos para os demais
+                        addAuto();
+                        const autoId = index + 1;
+                        document.getElementById(`auto_numero_${autoId}`).value = auto.numero || '';
+                        document.getElementById(`auto_descricao_${autoId}`).value = auto.descricao || '';
+                    }
+                });
+            }
+            
+            // Carrega termos
+            if (reportData.termos && reportData.termos.length > 0) {
+                reportData.termos.forEach((termo, index) => {
+                    if (index === 0) {
+                        // Usa o primeiro termo que já existe
+                        document.getElementById('termo_tipo_1').value = termo.tipo || '';
+                        document.getElementById('termo_numero_1').value = termo.numero || '';
+                        termoCount = 1;
+                    } else {
+                        // Adiciona novos termos para os demais
+                        addTermo();
+                        const termoId = index + 1;
+                        document.getElementById(`termo_tipo_${termoId}`).value = termo.tipo || '';
+                        document.getElementById(`termo_numero_${termoId}`).value = termo.numero || '';
+                    }
+                });
             }
             
             alert('Dados carregados com sucesso! Nota: As fotos precisarão ser adicionadas novamente.');
@@ -705,6 +900,8 @@
         document.getElementById('print-report').addEventListener('click', printReport);
         document.getElementById('save-data').addEventListener('click', saveData);
         document.getElementById('load-data').addEventListener('click', loadData);
+        document.getElementById('add-auto').addEventListener('click', addAuto);
+        document.getElementById('add-termo').addEventListener('click', addTermo);
         
         document.getElementById('photo-upload').addEventListener('change', function(e) {
             const files = e.target.files;
